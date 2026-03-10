@@ -1,0 +1,10 @@
+fastapi
+sqlmodel
+sqlalchemy
+uvicorn
+bcrypt
+pyjwt
+python-dotenv
+'pydantic[email]'
+python-multipart
+slowapi
