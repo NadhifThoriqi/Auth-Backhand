@@ -5,6 +5,6 @@ uvicorn
 bcrypt
 pyjwt
 python-dotenv
-'pydantic[email]'
+pydantic[email]
 python-multipart
 slowapi
