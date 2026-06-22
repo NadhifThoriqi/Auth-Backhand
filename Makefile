@@ -22,6 +22,14 @@ prod:
 	gunicorn --config gunicorn.conf.py main:app
 
 # ==========================================
+# Production — Docker
+# ==========================================
+dock:
+	@echo Menjalankan aplikasi lewat docker
+	docker run -p 8000:8000 auth
+
+
+# ==========================================
 # Production custom — override lewat CLI
 # ==========================================
 prod-custom:
