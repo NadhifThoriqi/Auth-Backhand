@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Selamat Datang</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f0f4f8; font-family: 'Segoe UI', Arial, sans-serif; }
+    .wrap { max-width: 560px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #11998e, #38ef7d); padding: 40px 30px; text-align: center; }
+    .header h1 { margin: 0; color: #fff; font-size: 26px; }
+    .header p  { margin: 6px 0 0; color: rgba(255,255,255,0.85); font-size: 14px; }
+    .body { padding: 36px 32px; color: #374151; }
+    .body h2 { margin-top: 0; font-size: 20px; color: #111827; }
+    .body p  { line-height: 1.7; font-size: 15px; }
+    .btn { display: inline-block; margin-top: 20px; padding: 13px 32px; background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; }
+    .footer { padding: 20px 32px; background: #f9fafb; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>👋 Selamat Datang!</h1>
+      <p>Kami senang kamu bergabung</p>
+    </div>
+    <div class="body">
+      <h2>Halo, {{ username }}! 🎉</h2>
+      <p>Akun kamu berhasil dibuat. Sekarang kamu sudah bisa menggunakan semua fitur yang tersedia.</p>
+      <p>Jika ada pertanyaan, jangan ragu untuk menghubungi kami kapan saja.</p>
+      {% if verification_url %}
+      <a href="{{ verification_url }}" class="btn">Verifikasi Email</a>
+      {% endif %}
+    </div>
+    <div class="footer">
+      © 2026 Email Bot — Email otomatis, jangan dibalas.
+    </div>
+  </div>
+</body>
+</html>

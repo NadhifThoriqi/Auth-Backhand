@@ -1,0 +1,586 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "FastAPI",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "Read Root",
+                "description": "Endpoint root untuk mengecek apakah aplikasi sudah aktif.\n\nReturns:\n    dict: Status aplikasi dan path root yang dikonfigurasi.",
+                "operationId": "read_root__get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "summary": "Health Check",
+                "description": "Endpoint health check untuk monitoring ketersediaan layanan.\n\nReturns:\n    dict: Status kesehatan aplikasi dengan nilai \"ok\".",
+                "operationId": "health_check_health_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Read Users Me",
+                "description": "Mengambil data profil pengguna yang sedang aktif/login.\n\nArgs:\n    token (str): JWT access token dari cookie atau Authorization header.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    Auth: Objek data pengguna yang sesuai dengan skema ShowMe.",
+                "operationId": "read_users_me_auth_me_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShowMe"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/sign-up": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Sign Up",
+                "description": "Mendaftarkan akun baru atau mengirim ulang OTP untuk akun yang belum terverifikasi.\n\nJika email sudah terdaftar dan sudah terverifikasi, request akan ditolak.\nJika email sudah ada tapi belum terverifikasi, OTP baru akan dikirim ulang.\n\nArgs:\n    data_in (SignUp): Data pendaftaran (name, email, password).\n    background_tasks (BackgroundTasks): Digunakan untuk mengirim email OTP secara async.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa OTP telah dikirim ke email.",
+                "operationId": "sign_up_auth_sign_up_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignUp"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Sign Up Auth Sign Up Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/resend-otp": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Resend Otp",
+                "description": "Mengirim ulang kode OTP ke email pengguna yang belum terverifikasi.\n\nArgs:\n    data_in (OTP): Data berisi email pengguna.\n    background_tasks (BackgroundTasks): Digunakan untuk mengirim email OTP secara async.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa OTP baru telah dikirim ke email.",
+                "operationId": "resend_otp_auth_resend_otp_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OTP"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Resend Otp Auth Resend Otp Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify",
+                "description": "Memverifikasi kode OTP yang dimasukkan pengguna untuk mengaktifkan akun.\n\nJika OTP valid, akun akan diaktifkan dan pengguna langsung mendapatkan\naccess token (login otomatis) melalui HTTPOnly cookie.\n\nArgs:\n    response (Response): Objek response FastAPI untuk menyimpan cookie token.\n    data_in (VerifyOTP): Data berisi email dan kode OTP.\n    background_tasks (BackgroundTasks): Digunakan untuk mengirim email selamat datang.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa login berhasil.",
+                "operationId": "verify_auth_verify_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VerifyOTP"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Verify Auth Verify Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/sign-in": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Sign In",
+                "description": "Melakukan login pengguna menggunakan email dan password.\n\nJika autentikasi berhasil, access token disimpan dalam HTTPOnly cookie.\nAkun yang belum terverifikasi tidak dapat login.\n\nArgs:\n    response (Response): Objek response FastAPI untuk menyimpan cookie token.\n    request (SignIn): Data login berisi email dan password.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa login berhasil.",
+                "operationId": "sign_in_auth_sign_in_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignIn"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Sign In Auth Sign In Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Forgot",
+                "description": "Mengirimkan link reset password ke email pengguna.\n\nLink yang dikirim mengandung JWT token bertipe 'reset_password'\nyang berlaku selama 1 jam.\n\nArgs:\n    forgot_in (ForgotPassword): \n        Data berisi email pengguna.\n    background_tasks (BackgroundTasks): \n        Digunakan untuk mengirim email reset password secara async.\n    session (AsyncSession): \n        Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa proses reset password berhasil dimulai.",
+                "operationId": "forgot_auth_forgot_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPassword"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Forgot Auth Forgot Post"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/log-out": {
+            "delete": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Log Out",
+                "description": "Mengakhiri sesi pengguna (logout).\n\nToken aktif akan dimasukkan ke daftar hitam (blacklist) agar tidak bisa\ndigunakan kembali, dan cookie 'access_token' akan dihapus dari browser.\n\nArgs:\n    response (Response): Objek response FastAPI untuk menghapus cookie.\n    request (Request): Objek request FastAPI untuk membaca cookie yang ada.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa logout berhasil.",
+                "operationId": "log_out_auth_log_out_delete",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Log Out Auth Log Out Delete"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "patch": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Change",
+                "description": "Mengubah password pengguna menggunakan token reset yang dikirim via email.\n\nToken harus bertipe 'reset_password' dan masih berlaku (belum kadaluwarsa).\n\nArgs:\n    edit_in (ChangePassword): Data berisi token reset dan password baru.\n    session (AsyncSession): Sesi database async yang di-inject oleh FastAPI.\n\nReturns:\n    dict[str, str]: Pesan konfirmasi bahwa password berhasil diubah.",
+                "operationId": "change_auth_reset_password_patch",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePassword"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object",
+                                    "title": "Response Change Auth Reset Password Patch"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ChangePassword": {
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "title": "Token"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "token",
+                    "password"
+                ],
+                "title": "ChangePassword",
+                "description": "Skema untuk request reset/ubah password menggunakan token.\n\nAttributes:\n    token (str): JWT token bertipe 'reset_password' yang dikirim via email.\n    password (str): Password baru yang diinginkan pengguna."
+            },
+            "ForgotPassword": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "ForgotPassword",
+                "description": "Skema untuk request lupa password. Hanya membutuhkan email.\nMenggunakan OTP secara langsung tanpa menambah field baru."
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "OTP": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "OTP",
+                "description": "Skema dasar yang hanya berisi email. Digunakan sebagai base class\ndan secara langsung untuk endpoint resend-otp dan forgot-password.\n\nAttributes:\n    email (EmailStr): Alamat email yang divalidasi format-nya oleh Pydantic."
+            },
+            "ShowMe": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "string",
+                                "format": "email"
+                            }
+                        ],
+                        "title": "Name"
+                    },
+                    "email": {
+                        "type": "string",
+                        "title": "Email"
+                    },
+                    "is_verified": {
+                        "type": "boolean",
+                        "title": "Is Verified"
+                    },
+                    "role": {
+                        "type": "string",
+                        "title": "Role"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "is_verified",
+                    "role"
+                ],
+                "title": "ShowMe",
+                "description": "Skema response untuk menampilkan data profil pengguna yang sedang login.\nDigunakan pada endpoint GET /auth/me.\n\nAttributes:\n    id (uuid.UUID): ID unik pengguna.\n    name (str | EmailStr): Nama pengguna.\n    email (str): Alamat email pengguna.\n    is_verified (bool): Status verifikasi akun.\n    role (str): Peran pengguna dalam sistem (admin/buyer)."
+            },
+            "SignIn": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "title": "SignIn",
+                "description": "Skema untuk request login pengguna.\n\nAttributes:\n    email (EmailStr): Alamat email pengguna (diwarisi dari OTP).\n    password (str): Password plaintext pengguna."
+            },
+            "SignUp": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email",
+                    "password",
+                    "name"
+                ],
+                "title": "SignUp",
+                "description": "Skema untuk request pendaftaran akun baru.\n\nAttributes:\n    email (EmailStr): Alamat email pengguna (diwarisi dari OTP).\n    password (str): Password plaintext pengguna (diwarisi dari SignIn).\n    name (str): Nama lengkap pengguna."
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    },
+                    "input": {
+                        "title": "Input"
+                    },
+                    "ctx": {
+                        "type": "object",
+                        "title": "Context"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            },
+            "VerifyOTP": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    },
+                    "otp": {
+                        "type": "integer",
+                        "title": "Otp"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email",
+                    "otp"
+                ],
+                "title": "VerifyOTP",
+                "description": "Skema untuk request verifikasi OTP saat aktivasi akun.\n\nAttributes:\n    email (EmailStr): Alamat email pengguna (diwarisi dari OTP).\n    otp (int): Kode OTP 6 digit yang dikirim ke email pengguna."
+            }
+        }
+    },
+    "servers": [
+        {
+            "url": "/thorix"
+        }
+    ]
+}

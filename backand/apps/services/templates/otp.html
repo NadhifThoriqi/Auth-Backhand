@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kode OTP</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f0f4f8; font-family: 'Segoe UI', Arial, sans-serif; }
+    .wrap { max-width: 480px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #f093fb, #f5576c); padding: 36px 30px; text-align: center; }
+    .header h1 { margin: 0; color: #fff; font-size: 24px; }
+    .body { padding: 36px 32px; color: #374151; text-align: center; }
+    .body p { font-size: 15px; line-height: 1.7; margin-bottom: 24px; }
+    .otp-box { background: #fff5f7; border: 2px dashed #f5576c; border-radius: 12px; padding: 24px 16px; display: inline-block; width: 100%; box-sizing: border-box; }
+    .otp-code { font-size: 44px; font-weight: 900; letter-spacing: 14px; color: #f5576c; font-family: 'Courier New', monospace; }
+    .timer { margin-top: 10px; display: inline-block; background: #fef9c3; color: #b45309; border-radius: 6px; padding: 5px 14px; font-size: 13px; font-weight: 600; }
+    .warning { margin-top: 24px; background: #fff7ed; border-left: 4px solid #f97316; border-radius: 0 8px 8px 0; padding: 14px 16px; text-align: left; font-size: 13px; color: #7c2d12; line-height: 1.6; }
+    .footer { padding: 20px 32px; background: #f9fafb; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>🔐 Kode Verifikasi OTP</h1>
+    </div>
+    <div class="body">
+      <p>Halo <strong>{{ username }}</strong>, gunakan kode berikut untuk verifikasi:</p>
+      <div class="otp-box">
+        <div class="otp-code">{{ otp_code }}</div>
+        <div class="timer">⏱ Berlaku {{ expiry_minutes }} menit</div>
+      </div>
+      <div class="warning">
+        ⚠️ <strong>Jangan bagikan kode ini</strong> kepada siapapun, termasuk tim kami. Jika kamu tidak meminta kode ini, abaikan email ini.
+      </div>
+      {% if verify_url %}
+      <div style="margin-top: 28px;">
+        <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+          Tidak sengaja menutup halaman verifikasi? Klik tombol di bawah:
+        </p>
+        <a href="{{ verify_url }}" style="display:inline-block; background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+          🔗 Buka Halaman Verifikasi
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="footer">
+      © 2026 Email Bot — Email otomatis, jangan dibalas.
+    </div>
+  </div>
+</body>
+</html>

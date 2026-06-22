@@ -1,0 +1,12 @@
+fastapi 
+uvicorn 
+sqlmodel
+python-dotenv
+asyncpg
+
+pyjwt
+types-PyJWT
+bcrypt
+environs
+fastapi-mail
+# python-multipart

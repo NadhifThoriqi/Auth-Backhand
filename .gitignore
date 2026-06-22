@@ -1,0 +1,25 @@
+# Database lokal (sangat bagus untuk diabaikan agar data testing tidak masuk repo)
+*.db
+
+# Environment Virtual Python
+venv/
+.venv/
+
+# Environment Variables / Kunci Rahasia (Wajib diabaikan demi keamanan)
+.env
+
+# Python bytecode (Mengabaikan __pycache__ di semua direktori)
+**/__pycache__/
+*.py[cod]
+
+# File kompresi / backup yang tidak diperlukan di Git
+*.zip
+*.tar.gz
+
+# Catatan: File di folder front-end (api.md, api.js, index.html, dll) 
+# TIDAK PERLU dimasukkan ke .gitignore jika Anda INGIN file-file tersebut 
+# masuk ke dalam repositori GitHub/GitLab agar bisa dikerjakan bersama tim.
+
+.git
+.ruff_cache
+.vscode
