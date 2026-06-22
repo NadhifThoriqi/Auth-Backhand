@@ -1,0 +1,48 @@
+┣ 📂apps
+┃ ┣ 📂__pycache__
+┃ ┃ ┗ 📜__init__.cpython-312.pyc
+┃ ┣ 📂api
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┣ 📜__init__.cpython-312.pyc
+┃ ┃ ┃ ┗ 📜auth.cpython-312.pyc
+┃ ┃ ┣ 📜__init__.py
+┃ ┃ ┗ 📜auth.py
+┃ ┣ 📂core
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┣ 📜enums.cpython-312.pyc
+┃ ┃ ┃ ┗ 📜security.cpython-312.pyc
+┃ ┃ ┣ 📜enums.py
+┃ ┃ ┗ 📜security.py
+┃ ┣ 📂db
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┗ 📜async_sessions.cpython-312.pyc
+┃ ┃ ┗ 📜async_sessions.py
+┃ ┣ 📂models
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┗ 📜auth.cpython-312.pyc
+┃ ┃ ┗ 📜auth.py
+┃ ┣ 📂schemas
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┗ 📜auth.cpython-312.pyc
+┃ ┃ ┗ 📜auth.py
+┃ ┣ 📂services
+┃ ┃ ┣ 📂__pycache__
+┃ ┃ ┃ ┣ 📜auth.cpython-312.pyc
+┃ ┃ ┃ ┗ 📜massages.cpython-312.pyc
+┃ ┃ ┣ 📂templates
+┃ ┃ ┃ ┣ 📜general.html
+┃ ┃ ┃ ┣ 📜otp.html
+┃ ┃ ┃ ┣ 📜reset_password.html
+┃ ┃ ┃ ┗ 📜welcome.html
+┃ ┃ ┣ 📜auth.py
+┃ ┃ ┗ 📜massages.py
+┃ ┗ 📜__init__.py
+┣ 📜.env
+┣ 📜.env.example
+┣ 📜.gitignore
+┣ 📜gunicorn.conf.py
+┣ 📜main.py
+┣ 📜Makefile
+┣ 📜openapi.json
+┣ 📜README.md
+┗ 📜requirements.txt

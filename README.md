@@ -1,258 +1,321 @@
-# 🔐 Backend Auth API
+# 🔐 FastAPI Auth Service
 
-Backend autentikasi berbasis **FastAPI** dengan fitur registrasi, verifikasi OTP via email, login, reset password, dan manajemen sesi menggunakan JWT + HTTPOnly Cookie.
+Backend layanan autentikasi berbasis **FastAPI** dengan dukungan database **PostgreSQL** (kompatibel dengan Supabase), JWT token, OTP via email, dan arsitektur async penuh.
 
----
-
-## 📋 Fitur
-
-- **Sign Up** — Registrasi akun baru dengan pengiriman OTP ke email
-- **Verify OTP** — Aktivasi akun menggunakan kode OTP 6 digit
-- **Resend OTP** — Kirim ulang kode OTP untuk akun yang belum terverifikasi
-- **Sign In** — Login dengan email & password, token disimpan di HTTPOnly Cookie
-- **Forgot Password** — Kirim link reset password ke email
-- **Reset Password** — Ubah password menggunakan token reset
-- **Logout** — Invalidasi token dengan sistem blacklist
-- **Me** — Ambil data profil pengguna yang sedang login
+> **Author:** Nadhif Thoriqi
 
 ---
 
-## 🗂️ Struktur Proyek
+## 📋 Daftar Isi
+
+- [Fitur](#-fitur)
+- [Teknologi](#-teknologi)
+- [Struktur Proyek](#-struktur-proyek)
+- [Instalasi](#-instalasi)
+- [Konfigurasi Environment](#-konfigurasi-environment)
+- [Menjalankan Aplikasi](#-menjalankan-aplikasi)
+- [API Endpoints](#-api-endpoints)
+- [Arsitektur & Alur Kerja](#-arsitektur--alur-kerja)
+- [Keamanan](#-keamanan)
+
+---
+
+## ✨ Fitur
+
+- ✅ **Registrasi akun** dengan verifikasi OTP via email
+- ✅ **Login** dengan email & password, token disimpan di HTTPOnly Cookie
+- ✅ **Kirim ulang OTP** untuk akun yang belum terverifikasi
+- ✅ **Lupa password** dengan link reset via email (token 1 jam)
+- ✅ **Reset password** menggunakan token JWT khusus
+- ✅ **Profil pengguna** (`/me`) untuk mendapatkan data user aktif
+- ✅ **Logout** dengan mekanisme blacklist token
+- ✅ **Sistem role** pengguna (`admin` / `buyer`)
+- ✅ **Async penuh** menggunakan `asyncpg` + SQLModel
+- ✅ **Email template HTML** untuk OTP, selamat datang, dan reset password
+
+---
+
+## 🛠 Teknologi
+
+| Komponen | Teknologi |
+|---|---|
+| Framework | [FastAPI](https://fastapi.tiangolo.com/) |
+| Server (Dev) | [Uvicorn](https://www.uvicorn.org/) |
+| Server (Prod) | [Gunicorn](https://gunicorn.org/) + Uvicorn Worker |
+| ORM | [SQLModel](https://sqlmodel.tiangolo.com/) + SQLAlchemy Async |
+| Database | PostgreSQL (via `asyncpg`) |
+| Autentikasi | [PyJWT](https://pyjwt.readthedocs.io/) (algoritma HS256) |
+| Hashing Password | [bcrypt](https://pypi.org/project/bcrypt/) |
+| Email | [fastapi-mail](https://sabuhish.github.io/fastapi-mail/) |
+| Konfigurasi | [environs](https://github.com/sloria/environs) + python-dotenv |
+
+---
+
+## 📁 Struktur Proyek
 
 ```
-.
-├── main.py                         # Entry point aplikasi FastAPI
-├── requirements.txt                # Daftar dependency Python
-├── .env.example                    # Contoh konfigurasi environment
-└── apps/
-    ├── api/
-    │   └── auth.py                 # Router & endpoint autentikasi
-    ├── core/
-    │   ├── enums.py                # Enumerasi (Role: admin, buyer)
-    │   └── security.py             # JWT, hashing password, validasi token
-    ├── db/
-    │   └── sync_sessions.py        # Koneksi database async & session factory
-    ├── models/
-    │   └── auth.py                 # Model tabel: Auth, BlacklistToken
-    ├── schemas/
-    │   └── auth.py                 # Skema Pydantic untuk request/response
-    └── services/
-        ├── auth.py                 # Logika bisnis autentikasi
-        ├── massages.py             # Layanan pengiriman email (FastAPI-Mail)
-        └── templates/              # Template HTML email
-            ├── general.html
-            ├── otp.html
-            ├── welcome.html
-            └── reset_password.html
+uji_supabase/
+├── apps/
+│   ├── api/
+│   │   └── auth.py          # Routing & endpoint HTTP autentikasi
+│   ├── core/
+│   │   ├── enums.py         # Enum Role (ADMIN, BUYER)
+│   │   └── security.py      # JWT, hashing password, validasi token
+│   ├── db/
+│   │   └── async_sessions.py # Engine, session async, helper save_db
+│   ├── models/
+│   │   └── auth.py          # Model tabel: Auth, BlacklistToken
+│   ├── schemas/
+│   │   └── auth.py          # Skema Pydantic (request/response DTO)
+│   └── services/
+│       ├── auth.py          # Logika bisnis autentikasi
+│       ├── messages.py      # Layanan pengiriman email
+│       └── templates/       # Template email HTML
+│           ├── otp.html
+│           ├── welcome.html
+│           ├── reset_password.html
+│           └── general.html
+├── main.py                  # Entry point FastAPI
+├── gunicorn.conf.py         # Konfigurasi Gunicorn production
+├── Makefile                 # Shortcut perintah umum
+├── requirements.txt         # Daftar dependensi Python
+└── .env.example             # Contoh file konfigurasi environment
 ```
 
 ---
 
-## ⚙️ Konfigurasi Environment
+## 🚀 Instalasi
 
-Salin file `.env.example` menjadi `.env` lalu sesuaikan isinya:
+### Prasyarat
 
+- Python 3.12+
+- PostgreSQL (atau akun Supabase)
+- Akun Gmail dengan [App Password](https://myaccount.google.com/apppasswords) aktif
+
+### Langkah-langkah
+
+**1. Clone repositori & masuk ke direktori proyek**
 ```bash
-cp .env.example .env
+git clone <url-repo>
+cd uji_supabase
 ```
 
-| Variable        | Keterangan                                              | Contoh                                                     |
-|-----------------|---------------------------------------------------------|------------------------------------------------------------|
-| `DATABASE_URL`  | URL koneksi database async (asyncpg)                    | `postgresql+asyncpg://user:pass@localhost:5432/mydb`       |
-| `SECRET_KEY`    | Kunci rahasia untuk signing JWT                         | `supersecretkey123`                                        |
-| `HTTPS`         | `True` jika sudah pakai HTTPS (untuk flag secure cookie)| `False`                                                    |
-| `DOMAIN`        | Domain frontend untuk link di email                     | `https://myapp.com`                                        |
-| `MAIL_USERNAME` | Username akun Gmail pengirim                            | `bot@gmail.com`                                            |
-| `MAIL_PASSWORD` | App Password Gmail (bukan password biasa)               | `xxxx xxxx xxxx xxxx`                                      |
-| `MAIL_FROM`     | Alamat email pengirim yang ditampilkan                  | `bot@gmail.com`                                            |
-
-> **Catatan:** Untuk `MAIL_PASSWORD`, gunakan **App Password** dari Google, bukan password akun Gmail biasa. Aktifkan di [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
-
----
-
-## 🚀 Instalasi & Menjalankan
-
-### 1. Clone repositori
-
-```bash
-git clone <url-repositori>
-cd <nama-folder>
-```
-
-### 2. Buat virtual environment
-
+**2. Buat dan aktifkan virtual environment**
 ```bash
 python -m venv venv
 source venv/bin/activate        # Linux/macOS
 venv\Scripts\activate           # Windows
 ```
 
-### 3. Install dependency
-
+**3. Install dependensi**
 ```bash
+make install
+# atau
 pip install -r requirements.txt
 ```
 
-### 4. Konfigurasi environment
-
+**4. Buat file `.env` dari template**
 ```bash
 cp .env.example .env
-# Edit file .env sesuai konfigurasi Anda
 ```
 
-### 5. Jalankan aplikasi
+**5. Isi konfigurasi di file `.env`** (lihat bagian [Konfigurasi Environment](#-konfigurasi-environment))
+
+---
+
+## ⚙️ Konfigurasi Environment
+
+Salin `.env.example` menjadi `.env` lalu sesuaikan nilainya:
+
+```env
+# ==============================================================================
+# 1. KONEKSI DATABASE
+# ==============================================================================
+DATABASE_URL="postgresql+asyncpg://user:password@host:port/database"
+
+# ==============================================================================
+# 2. KEAMANAN & KONFIGURASI APLIKASI
+# ==============================================================================
+SECRET_KEY="ganti-dengan-secret-key-yang-kuat-dan-panjang"
+HTTPS=False
+DOMAIN="http://localhost:5500"   # Domain frontend Anda
+
+# ==============================================================================
+# 3. PENGATURAN EMAIL (SMTP GMAIL)
+# ==============================================================================
+# Petunjuk mendapatkan MAIL_PASSWORD:
+#   1. Aktifkan 2FA di Akun Google > Keamanan > Autentikasi 2 Langkah.
+#   2. Buat "App Password", salin kode 16 digit yang muncul.
+MAIL_USERNAME="email@gmail.com"
+MAIL_PASSWORD="xxxx xxxx xxxx xxxx"  # App Password 16 digit
+MAIL_FROM="email@gmail.com"
+
+# ==============================================================================
+# 4. SERVER WEB (GUNICORN + UVICORN)
+# ==============================================================================
+BIND=0.0.0.0:8000
+TIMEOUT=120
+GRACEFUL_TIMEOUT=30
+KEEPALIVE=5
+MAX_REQUESTS=1000
+MAX_REQUESTS_JITTER=50
+LOG_LEVEL=info
+ACCESS_LOG=-
+ERROR_LOG=-
+PRELOAD_APP=true
+RELOAD=false
+# WORKERS=5   # Kosongkan untuk mengikuti jumlah core CPU otomatis
+```
+
+> **Tips:** Gunakan `python -c "import secrets; print(secrets.token_hex(32))"` untuk membuat `SECRET_KEY` yang kuat.
+
+---
+
+## ▶️ Menjalankan Aplikasi
+
+### Mode Development (Hot Reload)
+```bash
+make dev
+```
+Aplikasi akan berjalan di `http://localhost:8000` dengan auto-reload aktif.
+
+### Mode Production (Gunicorn)
+```bash
+make prod
+```
+
+### Mode Production dengan Override CLI
+```bash
+make prod-custom
+```
+
+### Akses Dokumentasi API
+Setelah aplikasi berjalan, buka di browser:
+- **Swagger UI:** `http://localhost:8000/thorix/docs`
+- **ReDoc:** `http://localhost:8000/thorix/redoc`
+
+---
+
+## 📡 API Endpoints
+
+Semua endpoint berada di bawah prefix `/auth`.
+
+| Method | Endpoint | Deskripsi | Auth |
+|---|---|---|---|
+| `GET` | `/auth/me` | Mengambil data pengguna yang sedang login | ✅ Required |
+| `POST` | `/auth/sign-up` | Mendaftar akun baru & kirim OTP ke email | ❌ |
+| `POST` | `/auth/resend-otp` | Kirim ulang kode OTP | ❌ |
+| `POST` | `/auth/verify` | Verifikasi OTP untuk mengaktifkan akun | ❌ |
+| `POST` | `/auth/sign-in` | Login dengan email & password | ❌ |
+| `POST` | `/auth/forgot` | Kirim link reset password ke email | ❌ |
+| `DELETE` | `/auth/log-out` | Logout & hapus session | ✅ Required |
+| `PATCH` | `/auth/reset-password` | Ubah password menggunakan token reset | ❌ |
+
+### Contoh Request
+
+**Registrasi (`POST /auth/sign-up`)**
+```json
+{
+  "name": "Nadhif Thoriqi",
+  "email": "nadhif@example.com",
+  "password": "password123"
+}
+```
+
+**Login (`POST /auth/sign-in`)**
+```json
+{
+  "email": "nadhif@example.com",
+  "password": "password123"
+}
+```
+
+**Verifikasi OTP (`POST /auth/verify`)**
+```json
+{
+  "email": "nadhif@example.com",
+  "otp": 123456
+}
+```
+
+**Reset Password (`PATCH /auth/reset-password`)**
+```json
+{
+  "token": "<token_dari_email>",
+  "password": "password_baru"
+}
+```
+
+---
+
+## 🏗 Arsitektur & Alur Kerja
+
+### Alur Registrasi
+```
+Client → POST /sign-up → Cek email di DB
+    ├── Email sudah terverifikasi → ❌ 400 Error
+    ├── Email ada tapi belum verifikasi → Update OTP baru
+    └── Email baru → Buat akun baru
+              ↓
+         Hash password → Simpan ke DB → Kirim OTP via email (background)
+```
+
+### Alur Login
+```
+Client → POST /sign-in → Cari user by email
+    ├── Tidak ditemukan / password salah → ❌ 401 Unauthorized
+    ├── Belum verifikasi OTP → ❌ 403 Forbidden
+    └── Valid → Generate JWT (30 hari) → Set HTTPOnly Cookie
+```
+
+### Alur Logout
+```
+Client → DELETE /log-out → Baca token dari Cookie
+    └── Simpan token ke tabel BlacklistToken → Hapus Cookie
+```
+
+### Struktur Token JWT
+
+Token akses (`type: access`) memuat:
+```json
+{
+  "sub": "uuid-user",
+  "email": "user@example.com",
+  "name": "Nama User",
+  "type": "access",
+  "exp": 1234567890
+}
+```
+
+Token reset password (`type: reset_password`) berlaku **1 jam** dan hanya bisa digunakan di endpoint `/reset-password`.
+
+---
+
+## 🔒 Keamanan
+
+| Fitur | Implementasi |
+|---|---|
+| **Hashing password** | bcrypt dengan salt otomatis |
+| **JWT** | Algoritma HS256, masa berlaku 30 hari (access) / 1 jam (reset) |
+| **Cookie** | HTTPOnly, SameSite=Lax — proteksi XSS & CSRF |
+| **Token Blacklist** | Token yang logout disimpan di DB & ditolak saat digunakan kembali |
+| **OTP** | 6 digit, di-generate dengan `secrets.randbelow` (kriptografis aman) |
+| **Validasi tipe token** | Token login dan reset password dibedakan via field `type` |
+
+---
+
+## 🧹 Perintah Lainnya
 
 ```bash
-uvicorn main:app --reload
-```
+# Menjalankan test
+make test
 
-Aplikasi akan berjalan di `http://localhost:8000`
-
-> Karena dikonfigurasi dengan `root_path="/thorix"`, dokumentasi Swagger tersedia di:
-> `http://localhost:8000/thorix/docs`
-
----
-
-## 📡 Daftar Endpoint
-
-Base URL: `/auth`
-
-| Method     | Endpoint              | Deskripsi                                          | Auth       |
-|------------|-----------------------|----------------------------------------------------|------------|
-| `GET`      | `/auth/me`            | Mengambil data profil pengguna yang login          | ✅ Required |
-| `POST`     | `/auth/sign-up`       | Registrasi akun baru, kirim OTP ke email           | ❌          |
-| `POST`     | `/auth/resend-otp`    | Kirim ulang OTP untuk akun belum terverifikasi     | ❌          |
-| `POST`     | `/auth/verify`        | Verifikasi OTP & aktivasi akun (auto login)        | ❌          |
-| `POST`     | `/auth/sign-in`       | Login dengan email & password                      | ❌          |
-| `POST`     | `/auth/forgot`        | Kirim link reset password ke email                 | ❌          |
-| `DELETE`   | `/auth/log-out`       | Logout & invalidasi token                          | ✅ Required |
-| `PATCH`    | `/auth/reset-password`| Ubah password menggunakan token reset              | ❌          |
-
-### Contoh Request & Response
-
-#### POST `/auth/sign-up`
-```json
-// Request Body
-{
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "password": "password123"
-}
-
-// Response 200
-{
-  "status": "success",
-  "message": "Kode verifikasi baru telah dikirim ke email Anda."
-}
-```
-
-#### POST `/auth/verify`
-```json
-// Request Body
-{
-  "email": "budi@example.com",
-  "otp": 482910
-}
-
-// Response 200
-{
-  "status": "success",
-  "message": "Login berhasil"
-}
-```
-
-#### POST `/auth/sign-in`
-```json
-// Request Body
-{
-  "email": "budi@example.com",
-  "password": "password123"
-}
-
-// Response 200
-{
-  "status": "success",
-  "message": "Login berhasil"
-}
-```
-
-#### GET `/auth/me`
-```json
-// Response 200
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "is_verified": true,
-  "role": "buyer"
-}
+# Membersihkan file cache Python
+make clean
 ```
 
 ---
 
-## 🔒 Mekanisme Keamanan
+## 📄 Lisensi
 
-### JWT + HTTPOnly Cookie
-Token disimpan dalam HTTPOnly Cookie sehingga tidak dapat diakses oleh JavaScript (proteksi XSS). Konfigurasi cookie:
-
-| Parameter  | Nilai           | Keterangan                        |
-|------------|-----------------|-----------------------------------|
-| `httponly` | `True`          | Tidak bisa diakses JavaScript     |
-| `samesite` | `lax`           | Proteksi dasar CSRF               |
-| `max_age`  | `2592000` detik | Berlaku selama 30 hari            |
-| `secure`   | Dari env `HTTPS`| `True` jika sudah pakai HTTPS     |
-
-### Autentikasi Request
-API mendukung dua metode pengiriman token:
-
-1. **Cookie** (untuk Web Browser) — otomatis dikirim browser
-2. **Authorization Header Bearer** (untuk Mobile/Postman):
-   ```
-   Authorization: Bearer <token>
-   ```
-
-### Token Blacklist
-Saat logout, token dimasukkan ke tabel `blacklist_token` di database. Setiap request akan dicek terlebih dahulu apakah tokennya ada di blacklist sebelum diproses.
-
-### Password Hashing
-Password di-hash menggunakan **bcrypt** dengan salt acak sebelum disimpan ke database.
-
----
-
-## 🗃️ Struktur Database
-
-### Tabel `auth`
-
-| Kolom             | Tipe           | Keterangan                               |
-|-------------------|----------------|------------------------------------------|
-| `id`              | UUID (PK)      | ID unik pengguna (auto-generated)        |
-| `name`            | String         | Nama lengkap pengguna                    |
-| `email`           | EmailStr       | Email unik, terindeks                    |
-| `hashed_password` | String         | Password yang sudah di-hash (bcrypt)     |
-| `is_verified`     | Boolean        | Status verifikasi OTP (default: `False`) |
-| `otp_code`        | Integer / NULL | Kode OTP sementara, dihapus setelah verify |
-| `role`            | Enum           | Peran pengguna: `admin` atau `buyer`     |
-
-### Tabel `blacklist_token`
-
-| Kolom            | Tipe      | Keterangan                             |
-|------------------|-----------|----------------------------------------|
-| `id`             | UUID (PK) | ID unik (auto-generated)               |
-| `token`          | String    | Token JWT yang di-blacklist            |
-| `blacklisted_at` | Timestamp | Waktu token dimasukkan ke blacklist    |
-
----
-
-## 📦 Dependency Utama
-
-| Package          | Kegunaan                                    |
-|------------------|---------------------------------------------|
-| `fastapi`        | Framework web async                         |
-| `uvicorn`        | ASGI server                                 |
-| `sqlmodel`       | ORM berbasis SQLAlchemy + Pydantic          |
-| `asyncpg`        | Driver PostgreSQL async                     |
-| `pyjwt`          | Pembuatan & validasi JWT token              |
-| `bcrypt`         | Hashing password                            |
-| `fastapi-mail`   | Pengiriman email via SMTP                   |
-| `environs`       | Parsing environment variables               |
-| `python-dotenv`  | Memuat file `.env`                          |
+Proyek ini dibuat untuk keperluan pembelajaran dan pengembangan. Silakan digunakan dan dimodifikasi sesuai kebutuhan.

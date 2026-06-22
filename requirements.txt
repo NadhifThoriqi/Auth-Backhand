@@ -1,12 +1,13 @@
 fastapi 
-uvicorn 
+uvicorn
+gunicorn 
 sqlmodel
-python-dotenv
 asyncpg
 
 pyjwt
 types-PyJWT
 bcrypt
 environs
+python-dotenv
 fastapi-mail
-# python-multipart
+# python-multipart # Digunakan jika menggunakan login form, upload foto, upload dokumen 

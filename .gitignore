@@ -13,6 +13,7 @@ venv/
 *.py[cod]
 
 # File kompresi / backup yang tidak diperlukan di Git
+zip/
 *.zip
 *.tar.gz
 

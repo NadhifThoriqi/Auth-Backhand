@@ -14,7 +14,6 @@ from typing import Any, Dict
 
 import bcrypt
 import jwt
-from dotenv import load_dotenv
 from environs import Env
 from fastapi import HTTPException, Request, status
 from sqlmodel import select
@@ -22,10 +21,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..models.auth import Auth, BlacklistToken
 
-# Muat file .env
-load_dotenv()
-
 env = Env()
+env.read_env()
 SECRET_KEY = env.str("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY tidak ditemukan di environment variables!")

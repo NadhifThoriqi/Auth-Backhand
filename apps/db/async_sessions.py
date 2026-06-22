@@ -9,14 +9,13 @@ Deskripsi:
 
 from typing import Any
 
-from dotenv import load_dotenv
 from environs import Env
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-load_dotenv()
 env = Env()
+env.read_env()
 mysql_url = env.str("DATABASE_URL")
 
 if not mysql_url:

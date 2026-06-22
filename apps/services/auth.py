@@ -13,7 +13,6 @@ import uuid
 from datetime import timedelta
 from urllib.parse import quote
 
-from dotenv import load_dotenv
 from environs import Env
 from fastapi import BackgroundTasks, HTTPException, Request, Response, status
 from sqlmodel import select
@@ -27,12 +26,11 @@ from ..schemas.auth import OTP
 from ..schemas.auth import ChangePassword as cpassword
 from ..schemas.auth import ForgotPassword as fpassword
 from ..schemas.auth import SignIn, SignUp
-from ..services.massages import (send_otp_email, send_reset_password,
+from ..services.messages import (send_otp_email, send_reset_password,
                                  send_welcome_email)
 
-load_dotenv()
-
 env = Env()
+env.read_env()
 get_secure = env.bool("HTTPS", default=False)
 get_domain = env.str("DOMAIN", default=None)
 # URL frontend — sesuaikan dengan environment (dev atau production)

@@ -13,15 +13,14 @@ Dependencies:
 from pathlib import Path
 from typing import Any, Dict, List, Union, cast
 
-from dotenv import load_dotenv
 from environs import Env
 from fastapi import UploadFile
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from fastapi_mail.errors import ConnectionErrors
 from pydantic import EmailStr, NameEmail, SecretStr
 
-load_dotenv()
 env = Env()
+env.read_env()
 # ── Konfigurasi Direktori ───────────────────────────────────────────────────
 # Membuat folder templates otomatis jika belum ada untuk menyimpan file .html
 TEMPLATE_DIR = Path(__file__).parent / "templates"
