@@ -26,7 +26,7 @@ prod:
 # ==========================================
 dock:
 	@echo Menjalankan aplikasi lewat docker
-	docker run -p 8000:8000 auth
+	sudo docker build -t auth . && sudo docker run -p 8000:8000 auth
 
 
 # ==========================================
