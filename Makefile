@@ -24,9 +24,13 @@ prod:
 # ==========================================
 # Production — Docker
 # ==========================================
-dock:
+dock-build:
+	@echo build aplikasi docker
+	sudo docker build -t auth .
+	
+dock-run:
 	@echo Menjalankan aplikasi lewat docker
-	sudo docker build -t auth . && sudo docker run -p 8000:8000 auth
+	sudo docker run -p 8000:8000 auth
 
 
 # ==========================================
