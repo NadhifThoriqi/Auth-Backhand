@@ -6,9 +6,6 @@ Deskripsi:
     Menyediakan engine, session factory, dan fungsi-fungsi helper untuk
     interaksi dengan database.
 """
-
-from typing import Any
-
 from environs import Env
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
@@ -61,7 +58,7 @@ async def get_session_async():
         yield session
 
 
-async def save_db(session: AsyncSession, model_object: Any):
+async def save_db(session: AsyncSession, model_object: SQLModel) -> SQLModel:
     """
     Menyimpan atau memperbarui objek model ke database dan me-refresh datanya.
 

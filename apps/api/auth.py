@@ -16,15 +16,14 @@ Endpoints:
     DELETE /auth/log-out      - Logout dan menghapus session pengguna.
     PATCH /auth/reset-password - Mengubah password menggunakan token reset.
 """
-
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..core.security import get_current_user, get_token
+from ..core.security import get_current_user
 from ..db.async_sessions import get_session_async
 from ..models.auth import Auth
 from ..schemas.auth import (OTP, ChangePassword, ForgotPassword, ShowMe,
-                            SignIn, SignUp, VerifyOTP)
+                            SignIn, SignUp, VerifyOTP, EditProfile)
 from ..services.auth import edit_auth as ea
 from ..services.auth import forgot_password as fp
 from ..services.auth import logout_account as la
@@ -32,13 +31,14 @@ from ..services.auth import resend_otp as ro
 from ..services.auth import sign_in as si
 from ..services.auth import sign_up as up
 from ..services.auth import verify_account as va
+from ..services.auth import delete_account as da
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.get("/me", response_model=ShowMe)
 async def read_users_me(
-    token: str = Depends(get_token), session: AsyncSession = Depends(get_session_async)
+    user: Auth = Depends(get_current_user())
 ) -> Auth:
     """
     Mengambil data profil pengguna yang sedang aktif/login.
@@ -50,7 +50,6 @@ async def read_users_me(
     Returns:
         Auth: Objek data pengguna yang sesuai dengan skema ShowMe.
     """
-    user = await get_current_user(token, session)
     return user
 
 
@@ -175,7 +174,7 @@ async def forgot(
 @router.delete("/log-out")
 async def log_out(
     response: Response,
-    request: Request,
+    get_token: str = Depends(get_current_user(return_user_object=False)),
     session: AsyncSession = Depends(get_session_async),
 ) -> dict[str, str]:
     """
@@ -192,7 +191,8 @@ async def log_out(
     Returns:
         dict[str, str]: Pesan konfirmasi bahwa logout berhasil.
     """
-    return await la(response, request, session)
+    print(f"Token --+>{get_token}")
+    return await la(response, get_token, session)
 
 
 @router.patch("/reset-password")
@@ -213,3 +213,18 @@ async def change(
     """
     await ea(edit_in, session)
     return {"status": "success", "messages": "None"}
+
+@router.patch("/edit_profile")
+async def edit_profile(
+    edit_in: EditProfile, 
+    get_token: Auth = Depends(get_current_user()),
+    session: AsyncSession = Depends(get_session_async)
+):
+    return await ea(edit_in, session, get_token)
+
+@router.delete("/delete-account")
+async def delete_account(
+    user: Auth = Depends(get_current_user()),
+    session: AsyncSession = Depends(get_session_async)
+):
+    return await da(user, session)

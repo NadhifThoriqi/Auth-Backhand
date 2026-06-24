@@ -81,6 +81,11 @@ class ChangePassword(BaseModel):
     password: str
 
 
+class EditProfile(BaseModel):
+    email: EmailStr|None = None
+    name: str|None = None
+
+
 class ShowMe(BaseModel):
     """
     Skema response untuk menampilkan data profil pengguna yang sedang login.

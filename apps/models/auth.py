@@ -46,6 +46,10 @@ class Auth(SQLModel, table=True):
     is_verified: bool = Field(default=False)
     otp_code: int | None = Field(default=None, nullable=True)
     role: Role = Field(default=Role.BUYER, nullable=False)
+    deleted_at: datetime | None = Field(
+        default=None, 
+        sa_column=Column(TIMESTAMP(timezone=True), nullable=True)
+    )
 
 
 class BlacklistToken(SQLModel, table=True):
@@ -63,13 +67,7 @@ class BlacklistToken(SQLModel, table=True):
 
     __tablename__: Any = "blacklist_token"
 
-    id: uuid.UUID = Field(
-        default_factory=uuid.uuid4,  # Gunakan default_factory untuk fungsi
-        primary_key=True,
-        index=True,
-        unique=True,
-    )
-    token: str = Field(index=True, unique=True, nullable=False)
+    token: str = Field(primary_key=True, nullable=False)
     blacklisted_at: datetime = Field(
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False),
         default_factory=lambda: datetime.now(timezone.utc),

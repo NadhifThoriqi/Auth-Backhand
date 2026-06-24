@@ -15,11 +15,11 @@ from typing import Any, Dict
 import bcrypt
 import jwt
 from environs import Env
-from fastapi import HTTPException, Request, status
-from sqlmodel import select
+from fastapi import HTTPException, status, Cookie, Header, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..models.auth import Auth, BlacklistToken
+from ..db.async_sessions import get_session_async
 
 env = Env()
 env.read_env()
@@ -101,100 +101,85 @@ def create_access_token(
     return encoded_jwt
 
 
-async def get_token(request: Request) -> str:
-    """
-    Mendukung 2 metode autentikasi:
+async def _get_cookie(
+    session: AsyncSession, 
+    access_token: str | None = Cookie(None), 
+    authorization: str | None = Header(None)
+) -> Dict[str, str]:
+     # 1. Prioritaskan cek Cookie terlebih dahulu
+    if access_token:
+        token = access_token
 
-    1. Cookie (Untuk Web Browser)
-    2. Authorization Header Bearer (Untuk Mobile/Postman)
+    # 2. Jika tidak ada di cookie, cek Authorization Header (Bearer Token)
+    elif authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
 
-    Args:
-        request (Request): Objek HTTP request dari FastAPI.
+    else:
+        raise HTTPException(status_code=401, detail="Log in dulu yuk")
 
-    Returns:
-        str: Token JWT yang ditemukan dari cookie atau Authorization header.
-
-    Raises:
-        HTTPException: HTTP 401 jika token tidak ditemukan di kedua sumber.
-    """
-
-    # Cek Cookie
-    token_cookie = request.cookies.get("access_token")
-    if token_cookie:
-        return token_cookie
-
-    # Cek Authorization Header
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        return auth_header.split(" ")[1]
-
-    # Jika token tidak ditemukan
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Sesi login tidak ditemukan. Silakan login terlebih dahulu.",
-    )
-
-
-async def get_current_user(token: str, session: AsyncSession) -> Auth:
-    """
-    Memvalidasi token JWT dan mengembalikan objek pengguna yang sedang aktif.
-
-    Proses validasi:
-    1. Memeriksa apakah token ada di daftar hitam (blacklist/sudah logout).
-    2. Mendekode token JWT dan memvalidasi signature serta masa berlakunya.
-    3. Mengambil data pengguna dari database berdasarkan ID di payload token.
-    4. Memastikan tipe token adalah 'access' atau 'reset_password'.
-
-    Args:
-        token (str): JWT token yang akan divalidasi.
-        session (AsyncSession): Sesi database async untuk query data pengguna.
-
-    Returns:
-        Auth: Objek model pengguna yang ditemukan di database.
-
-    Raises:
-        HTTPException: HTTP 401 jika token di-blacklist, kadaluwarsa, tidak valid,
-                       payload tidak lengkap, tipe token salah, atau user tidak ditemukan.
-    """
-    # 1. Cek Blacklist
-    statement = select(BlacklistToken).where(BlacklistToken.token == token)
-    result = await session.exec(statement)
-    is_blacklisted = result.first()
+    is_blacklisted = await session.get(BlacklistToken, token)
 
     if is_blacklisted:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token sudah tidak berlaku (sudah logout)",
         )
-
     try:
+        # Decode kembali tokennya
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.ExpiredSignatureError as exc:
-        raise HTTPException(
-            status_code=401, detail="Token sudah kadaluwarsa, silakan login ulang"
-        ) from exc
-    except jwt.InvalidTokenError as exc:
-        raise HTTPException(
-            status_code=401, detail="Token rusak atau tidak valid"
-        ) from exc
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=401, detail="Gagal memproses token") from exc
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token sudah kadaluwarsa, silakan login ulang")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token rusak atau tidak valid")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Gagal memproses token")
 
-    # Logika setelah decode — di luar try/except JWT
-    token_id = payload.get("sub")
-    if not token_id:
-        raise HTTPException(status_code=401, detail="Payload token tidak valid")
+    return payload
 
+
+def get_current_user(return_user_object: bool | None = True):
+    async def dependency(
+        session: AsyncSession = Depends(get_session_async), 
+        access_token: str | None = Cookie(None), 
+        authorization: str | None = Header(None),
+    ) -> Auth | str:
+        payload = await _get_cookie(session, access_token, authorization)
+        token_type = payload.get("type")
+        # Pastikan tipe token adalah untuk login/access, bukan reset_password
+        if token_type != "access":  # nosec
+            raise HTTPException(
+                status_code=401, detail="Tipe token tidak valid untuk login"
+            )
+        
+        token_id = payload.get("sub")
+        if token_id is None:
+            raise HTTPException(status_code=401, detail="Token tidak valid")
+
+        if return_user_object:
+            user = await session.get(Auth, token_id)
+            if user is None:
+                raise HTTPException(status_code=401, detail="User tidak ditemukan")
+            return user  # Mengembalikan objek Auth
+
+        return token_id
+    
+    return dependency
+
+async def get_cookie_reset_password(
+    session: AsyncSession,
+    access_token: str | None = Cookie(None)
+) -> Auth:
+    payload = await _get_cookie(session, access_token)
     token_type = payload.get("type")
     # Pastikan tipe token adalah untuk login/access, bukan reset_password
-    if token_type not in ["access", "reset_password"]:  # nosec
+    if token_type != "reset_password":  # nosec
         raise HTTPException(
-            status_code=401, detail="Tipe token tidak valid untuk login"
+            status_code=401, detail="Tipe token tidak valid untuk ganti password"
         )
 
+    token_id = payload.get("sub")
     user = await session.get(Auth, token_id)
-    print(token_id, user)
-    if user is None:
-        raise HTTPException(status_code=401, detail="User tidak ditemukan di database")
 
+    if user is None:
+        raise HTTPException(status_code=401, detail="User tidak ditemukan atau token tidak valid")
     return user

@@ -10,22 +10,21 @@ Author:
 
 import secrets
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from urllib.parse import quote
 
 from environs import Env
-from fastapi import BackgroundTasks, HTTPException, Request, Response, status
-from sqlmodel import select
+from fastapi import BackgroundTasks, HTTPException, Response, status
+from sqlmodel import select, SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..core.security import (create_access_token, get_current_user,
+from ..core.security import (create_access_token, get_cookie_reset_password,
                              get_password_hash, verify_password)
 from ..db.async_sessions import save_db
 from ..models.auth import Auth, BlacklistToken
-from ..schemas.auth import OTP
+from ..schemas.auth import OTP, SignIn, SignUp, EditProfile
 from ..schemas.auth import ChangePassword as cpassword
 from ..schemas.auth import ForgotPassword as fpassword
-from ..schemas.auth import SignIn, SignUp
 from ..services.messages import (send_otp_email, send_reset_password,
                                  send_welcome_email)
 
@@ -105,7 +104,6 @@ async def sign_up(
         "message": "Kode verifikasi baru telah dikirim ke email Anda.",
     }
 
-
 async def resend_otp(
     data_in: OTP, session: AsyncSession, background_tasks: BackgroundTasks
 ) -> dict[str, str]:
@@ -161,7 +159,6 @@ async def resend_otp(
         "message": "Kode verifikasi baru telah dikirim ke email Anda.",
     }
 
-
 async def token(
     user_id: uuid.UUID, response: Response, session: AsyncSession
 ) -> dict[str, str]:
@@ -213,7 +210,6 @@ async def token(
 
     return {"status": "success", "message": "Login berhasil"}
 
-
 async def verify_account(
     response: Response,
     email: str,
@@ -261,7 +257,6 @@ async def verify_account(
     background_tasks.add_task(send_welcome_email, user.email, user.name)
     return await token(user.id, response, session)
 
-
 async def sign_in(
     response: Response, request: SignIn, session: AsyncSession
 ) -> dict[str, str]:
@@ -305,7 +300,6 @@ async def sign_in(
         )
 
     return await token(user_found.id, response, session)
-
 
 async def forgot_password(
     forgot: fpassword, session: AsyncSession, background_tasks: BackgroundTasks
@@ -353,8 +347,11 @@ async def forgot_password(
         reset_url=verify_url,
     )
 
-
-async def edit_auth(edit_in: cpassword, session: AsyncSession) -> None:
+async def edit_auth(
+    edit_in: cpassword | EditProfile, 
+    session: AsyncSession, 
+    token: Auth | None = None
+) -> SQLModel:
     """
     Mengubah password pengguna menggunakan token reset yang valid.
 
@@ -368,13 +365,35 @@ async def edit_auth(edit_in: cpassword, session: AsyncSession) -> None:
     Returns:
         None (hasil save_db dikembalikan namun tidak digunakan oleh pemanggil).
     """
-    auth = await get_current_user(edit_in.token, session)
-    auth.hashed_password = get_password_hash(edit_in.password)
+    if isinstance(edit_in, cpassword):
+        cookie = await get_cookie_reset_password(session, edit_in.token)
+        auth = await session.get(Auth, cookie)
+    
+        if auth is None:
+            raise HTTPException(status_code=401, detail="Payload token tidak valid")
+            
+        auth.hashed_password = get_password_hash(edit_in.password)
+
+    else:
+        if token is None:
+            raise HTTPException(status_code=401, detail="Token diperlukan untuk mengubah profil")
+            
+        auth = await session.get(Auth, token)
+        
+        if auth is None:
+            raise HTTPException(status_code=401, detail="Payload token tidak valid")
+            
+        # Update fields secara dinamis jika dikirimkan
+        if edit_in.email is not None:
+            auth.email = edit_in.email
+        if edit_in.name is not None:
+            auth.name = edit_in.name
+
+    # Memastikan data hanya disimpan jika objek auth berhasil ditemukan/dimodifikasi
     return await save_db(session, auth)
 
-
 async def logout_account(
-    response: Response, request: Request, session: AsyncSession
+    response: Response, get_token: str, session: AsyncSession
 ) -> dict[str, str]:
     """
     Mengakhiri session pengguna.
@@ -394,8 +413,6 @@ async def logout_account(
     Raises:
         HTTPException: HTTP 404 jika token tidak ditemukan di cookie (user belum login).
     """
-    get_token = request.cookies.get("access_token")
-
     if not get_token:
         raise HTTPException(status_code=404, detail="User tidak ditemukan")
 
@@ -412,3 +429,16 @@ async def logout_account(
     )
 
     return {"status": "success", "message": "Berhasil logout"}
+
+async def delete_account(
+    user: Auth,
+    session: AsyncSession
+):
+    current_time = datetime.now(timezone.utc)
+        
+    # 1. Ubah email agar constraint UNIQUE lepas
+    user.email = f"{user.email}//deleted//{int(current_time.timestamp())}"
+    user.deleted_at = current_time
+    
+    await save_db(session, user)
+    return {"message": "Akun berhasil dihapus"}
